@@ -1,0 +1,1640 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulação de Carregamento Dinâmico Wireless</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            overflow: hidden;
+            background: linear-gradient(135deg, #87CEEB 0%, #E0F6FF 100%);
+        }
+        
+        #canvas-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        /* Painel de informações ultra-discreto */
+        .info-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            padding: 12px 18px;
+            border-radius: 10px;
+            color: #212121;
+            font-size: 11px;
+            width: 180px;
+            min-width: 180px;
+            max-width: 180px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            opacity: 0.9;
+        }
+        
+        .info-panel:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.95);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        }
+        
+        .info-panel h4 {
+            margin: 0 0 8px 0;
+            font-size: 12px;
+            font-weight: 600;
+            color: #1B5E20;
+            text-shadow: none;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 4px 0;
+            opacity: 1;
+            color: #424242;
+        }
+        
+        .info-value {
+            color: #2E7D32;
+            font-weight: 600;
+            min-width: 70px; /* Largura mínima fixa */
+            text-align: right;
+            display: inline-block;
+        }
+        
+        /* Painel de estatísticas */
+        .stats-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            padding: 12px 18px;
+            border-radius: 10px;
+            color: #212121;
+            font-size: 11px;
+            min-width: 180px; /* Largura mínima fixa */
+            max-width: 180px; /* Largura máxima fixa */
+            width: 180px; /* Largura fixa */
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            opacity: 0.9;
+            transition: all 0.3s ease;
+        }
+        
+        .stats-panel:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.95);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        }
+        
+        .battery-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 5px 0;
+        }
+        
+        .battery-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            transition: width 0.5s ease;
+            border-radius: 2px;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+        
+        /* Controles minimalistas */
+        .controls-bar {
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 12px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        
+        .control-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: #424242;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        
+        .control-btn:hover {
+            background: rgba(0, 0, 0, 0.08);
+            transform: scale(1.1);
+        }
+        
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .control-btn.active {
+            background: linear-gradient(135deg, #4CAF50, #66BB6A);
+            color: white;
+        }
+        
+        .divider {
+            width: 1px;
+            height: 18px;
+            background: rgba(0, 0, 0, 0.1);
+        }
+        
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 8px;
+        }
+        
+        .speed-slider {
+            width: 100px;
+            height: 4px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 2px;
+            outline: none;
+        }
+        
+        .speed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #4CAF50;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .speed-label {
+            font-size: 10px;
+            color: #616161;
+            font-weight: 500;
+        }
+        
+        .speed-value {
+            font-size: 10px;
+            color: #424242;
+            font-weight: 600;
+            min-width: 50px;
+        }
+        
+        /* Indicador solar discreto */
+        .solar-indicator {
+            position: absolute;
+            bottom: 75px;
+            right: 25px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            background: rgba(255, 215, 0, 0.15);
+            border-radius: 15px;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        
+        .solar-dot {
+            width: 6px;
+            height: 6px;
+            background: #FFD700;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { 
+                box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7);
+            }
+            50% { 
+                box-shadow: 0 0 0 4px rgba(255, 215, 0, 0);
+            }
+        }
+        
+        .solar-text {
+            color: white;
+            font-size: 9px;
+            font-weight: 500;
+            opacity: 0.9;
+        }
+        
+        /* Loading */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 13px;
+            text-align: center;
+        }
+        
+        .loading-spinner {
+            width: 35px;
+            height: 35px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 8px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* FPS counter */
+        .fps-counter {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            color: white;
+            font-size: 10px;
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 3px 6px;
+            border-radius: 3px;
+            opacity: 0.7;
+        }
+        
+        /* Controlos info */
+        .controls-info {
+            position: absolute;
+            bottom: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 10px;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 4px 10px;
+            border-radius: 10px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        
+        .controls-info.show {
+            opacity: 0.8;
+        }
+        
+        .controls-info kbd {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 1px 4px;
+            border-radius: 3px;
+            margin: 0 2px;
+            font-weight: bold;
+        }
+        
+        /* Mode toggle button highlight */
+        #btn-mode {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            color: white;
+            min-width: 60px;
+            border-radius: 15px;
+            font-size: 11px;
+            padding: 0 10px;
+        }
+        
+        #btn-mode:hover {
+            background: linear-gradient(135deg, #1976D2, #2196F3);
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container">
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            A carregar ambiente...
+        </div>
+        
+        <!-- Painel de informações -->
+        <div class="info-panel">
+            <h4>⚡ Sistema Ativo</h4>
+            <div class="info-item">
+                <span style="color: #424242;">Modo</span>
+                <span class="info-value" id="mode-text">Solo</span>
+            </div>
+            <div class="info-item">
+                <span style="color: #424242;">Faixas</span>
+                <span class="info-value" id="lanes-text">2 vias</span>
+            </div>
+            <div class="info-item">
+                <span style="color: #424242;">Frequência</span>
+                <span class="info-value">85 kHz</span>
+            </div>
+            <div class="info-item">
+                <span style="color: #424242;">Energia</span>
+                <span class="info-value">Solar 100%</span>
+            </div>
+            <div class="info-item">
+                <span style="color: #424242;">Eficiência</span>
+                <span class="info-value" id="efficiency-text">90.7%</span>
+            </div>
+            <div class="info-item">
+                <span style="color: #424242;">Emissões</span>
+                <span class="info-value">0 kg/km</span>
+            </div>
+        </div>
+        
+        <!-- Painel de estatísticas -->
+        <div class="stats-panel">
+            <h4 style="color: #0277BD;">Estado</h4>
+            <div class="info-item">
+                <span style="color: #424242;">Veículos</span>
+                <span class="info-value" id="vehicles-count">1 ativo</span>
+            </div>
+            <div class="info-item">
+                <span style="color: #424242;">Velocidade</span>
+                <span class="info-value" id="current-speed">80 km/h</span>
+            </div>
+            <div class="info-item">
+                <span style="color: #424242;">Potência</span>
+                <span class="info-value" id="current-power">0 kW</span>
+            </div>
+            <div class="info-item">
+                <span style="color: #424242;">Bateria</span>
+                <span class="info-value" id="battery-level">50%</span>
+            </div>
+            <div class="battery-bar">
+                <div class="battery-fill" id="battery-bar" style="width: 50%"></div>
+            </div>
+            <div class="info-item">
+                <span style="color: #424242;">Autonomia</span>
+                <span class="info-value" id="range">320 km</span>
+            </div>
+        </div>
+        
+        <!-- Indicador solar -->
+        <div class="solar-indicator">
+            <div class="solar-dot"></div>
+            <span class="solar-text">Solar</span>
+        </div>
+        
+        <!-- FPS Counter -->
+        <div class="fps-counter" id="fps">FPS: 60</div>
+        
+        <!-- Controlos Info -->
+        <div class="controls-info" id="controls-info">
+            Modo Autoestrada: <kbd>A</kbd> Faixa Esquerda | <kbd>D</kbd> Faixa Direita
+        </div>
+        
+        <!-- Barra de controles -->
+        <div class="controls-bar">
+            <button class="control-btn" id="btn-play" title="Play/Pause">⏸</button>
+            <button class="control-btn" id="btn-reset" title="Repor Vista">↻</button>
+            <button class="control-btn" id="btn-view" title="Mudar Vista">👁</button>
+            <div class="divider"></div>
+            <button id="btn-mode" title="Alternar Modo">Solo 🚙</button>
+            <div class="divider"></div>
+            <button class="control-btn active" id="btn-energy" title="Energia">⚡</button>
+            <div class="divider"></div>
+            <div class="speed-control">
+                <span class="speed-label">Velocidade</span>
+                <input type="range" class="speed-slider" id="speed-slider" 
+                       min="80" max="100" value="80" step="5">
+                <span class="speed-value" id="speed-value">80 km/h</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // ===== VARIÁVEIS GLOBAIS =====
+        let scene, camera, renderer, controls;
+        let suv, suvWheels = [];
+        let otherCars = [];
+        let road, coils = [], energyFields = [];
+        let buildings = [], trees = [];
+        let solarPanels = [];
+        let particleSystems = [];
+        let grassMesh;
+        
+        // Estado
+        let isPlaying = true;
+        let showEnergy = true;
+        let currentView = 0;
+        let vehicleSpeed = 80;
+        let batteryLevel = 50;
+        let totalEnergy = 0;
+        let suvPosition = -150;
+        
+        // MODO - false = Solo, true = Autoestrada
+        let isHighwayMode = false;
+        
+        // FPS Counter
+        let frameCount = 0;
+        let fps = 60;
+        let lastTime = performance.now();
+        
+        // Configurações
+        const ROAD_LENGTH = 500;
+        const NUM_COILS = 40;
+        const COIL_SPACING = ROAD_LENGTH / NUM_COILS;
+        const BASE_SPEED = 0.25;
+        
+        // Clock para animações
+        const clock = new THREE.Clock();
+        
+        // ===== INICIALIZAÇÃO =====
+        function init() {
+            setupScene();
+            setupLighting();
+            createMaterials();
+            createRealisticEnvironment();
+            createRoad();
+            createCoils();
+            createSUV();
+            createOtherCars(); // Criar carros ANTES de setMode
+            createSolarPanels();
+            createEnergyFields();
+            createTrees();
+            createBuildings();
+            setupControls();
+            setupEventListeners();
+            
+            // Iniciar em modo Solo
+            setMode(false);
+            
+            // Esconder loading
+            setTimeout(() => {
+                document.getElementById('loading').style.display = 'none';
+            }, 800);
+            
+            animate();
+        }
+        
+        function setupScene() {
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0xE8F4F8, 200, 1000); // Aumentado de 150,800 para 200,1000
+            
+            // Câmera
+            camera = new THREE.PerspectiveCamera(
+                60,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                2000
+            );
+            camera.position.set(50, 35, 70);
+            camera.lookAt(0, 0, 0);
+            
+            // Renderizador
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: true,
+                alpha: false,
+                powerPreference: "high-performance"
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.0;
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+        }
+        
+        function setupLighting() {
+            // Luz ambiente
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            // Sol principal
+            const sunLight = new THREE.DirectionalLight(0xffffff, 0.7);
+            sunLight.position.set(100, 150, 50);
+            sunLight.castShadow = true;
+            sunLight.shadow.camera.left = -200;
+            sunLight.shadow.camera.right = 200;
+            sunLight.shadow.camera.top = 200;
+            sunLight.shadow.camera.bottom = -200;
+            sunLight.shadow.camera.near = 0.5;
+            sunLight.shadow.camera.far = 600;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            scene.add(sunLight);
+            
+            // Luz hemisférica
+            const hemiLight = new THREE.HemisphereLight(0x87CEEB, 0x545454, 0.3);
+            scene.add(hemiLight);
+        }
+        
+        function createMaterials() {
+            window.materials = {
+                asphalt: new THREE.MeshLambertMaterial({ color: 0x3A3A3A }),
+                concrete: new THREE.MeshLambertMaterial({ color: 0x9E9E9E }),
+                grass: new THREE.MeshLambertMaterial({ color: 0x4CAF50, side: THREE.DoubleSide }),
+                glass: new THREE.MeshPhysicalMaterial({
+                    color: 0x88CCEE,
+                    metalness: 0.1,
+                    roughness: 0.1,
+                    transparent: true,
+                    opacity: 0.4
+                }),
+                carPaint: new THREE.MeshPhysicalMaterial({
+                    color: 0x0D47A1,
+                    metalness: 0.6,
+                    roughness: 0.3,
+                    clearcoat: 1.0,
+                    clearcoatRoughness: 0.03
+                }),
+                chrome: new THREE.MeshPhysicalMaterial({
+                    color: 0xCCCCCC,
+                    metalness: 1.0,
+                    roughness: 0.05
+                })
+            };
+        }
+        
+        function createRealisticEnvironment() {
+            // Chão de relva
+            const grassGeometry = new THREE.PlaneGeometry(2000, 2000, 100, 100);
+            const vertices = grassGeometry.attributes.position.array;
+            for (let i = 0; i < vertices.length; i += 3) {
+                vertices[i + 2] = Math.random() * 0.3;
+            }
+            grassGeometry.attributes.position.needsUpdate = true;
+            grassGeometry.computeVertexNormals();
+            
+            grassMesh = new THREE.Mesh(grassGeometry, materials.grass);
+            grassMesh.rotation.x = -Math.PI / 2;
+            grassMesh.position.y = -0.5;
+            grassMesh.receiveShadow = true;
+            scene.add(grassMesh);
+            
+            // Céu
+            const skyGeometry = new THREE.SphereGeometry(800, 32, 32);
+            const skyMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    topColor: { value: new THREE.Color(0x87CEEB) },
+                    bottomColor: { value: new THREE.Color(0xE8F4F8) },
+                    offset: { value: 33 },
+                    exponent: { value: 0.6 }
+                },
+                vertexShader: `
+                    varying vec3 vWorldPosition;
+                    void main() {
+                        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+                        vWorldPosition = worldPosition.xyz;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform vec3 topColor;
+                    uniform vec3 bottomColor;
+                    uniform float offset;
+                    uniform float exponent;
+                    varying vec3 vWorldPosition;
+                    void main() {
+                        float h = normalize(vWorldPosition + offset).y;
+                        gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
+                    }
+                `,
+                side: THREE.BackSide
+            });
+            const sky = new THREE.Mesh(skyGeometry, skyMaterial);
+            scene.add(sky);
+        }
+        
+        function createRoad() {
+            const roadGroup = new THREE.Group();
+            roadGroup.name = 'road-system';
+            
+            // Base da estrada (será redimensionada conforme o modo)
+            const roadGeometry = new THREE.BoxGeometry(ROAD_LENGTH, 0.2, 24);
+            road = new THREE.Mesh(roadGeometry, materials.asphalt);
+            road.position.y = -0.1;
+            road.receiveShadow = true;
+            roadGroup.add(road);
+            
+            scene.add(roadGroup);
+        }
+        
+        function updateRoad() {
+            // Limpar estrada antiga
+            const roadSystem = scene.getObjectByName('road-system');
+            if (roadSystem) {
+                scene.remove(roadSystem);
+                roadSystem.traverse((child) => {
+                    if (child.geometry) child.geometry.dispose();
+                    if (child.material) child.material.dispose();
+                });
+            }
+            
+            const roadGroup = new THREE.Group();
+            roadGroup.name = 'road-system';
+            
+            // Largura da estrada baseada no modo
+            const roadWidth = isHighwayMode ? 48 : 24;
+            const roadGeometry = new THREE.BoxGeometry(ROAD_LENGTH, 0.2, roadWidth);
+            road = new THREE.Mesh(roadGeometry, materials.asphalt);
+            road.position.y = -0.1;
+            road.receiveShadow = true;
+            roadGroup.add(road);
+            
+            // Criar marcações
+            if (isHighwayMode) {
+                // Autoestrada - 4 faixas
+                const lanePositions = [-18, -6, 6, 18];
+                
+                lanePositions.forEach((zPos, index) => {
+                    if (index === 1) {
+                        // Linha central dupla amarela
+                        [-0.5, 0.5].forEach(offset => {
+                            const centerLineGeometry = new THREE.BoxGeometry(ROAD_LENGTH, 0.02, 0.2);
+                            const centerLineMaterial = new THREE.MeshBasicMaterial({ color: 0xFFD700 });
+                            const centerLine = new THREE.Mesh(centerLineGeometry, centerLineMaterial);
+                            centerLine.position.set(0, 0.02, offset);
+                            roadGroup.add(centerLine);
+                        });
+                    } else {
+                        // Linhas tracejadas brancas
+                        for (let x = -ROAD_LENGTH/2; x < ROAD_LENGTH/2; x += 20) {
+                            const lineGeometry = new THREE.BoxGeometry(12, 0.02, 0.3);
+                            const lineMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+                            const line = new THREE.Mesh(lineGeometry, lineMaterial);
+                            line.position.set(x, 0.02, zPos);
+                            roadGroup.add(line);
+                        }
+                    }
+                });
+                
+                // Linhas laterais
+                [-23, 23].forEach(z => {
+                    const sideLineGeometry = new THREE.BoxGeometry(ROAD_LENGTH, 0.02, 0.3);
+                    const sideLineMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+                    const sideLine = new THREE.Mesh(sideLineGeometry, sideLineMaterial);
+                    sideLine.position.set(0, 0.02, z);
+                    roadGroup.add(sideLine);
+                });
+                
+                // Separador central
+                const dividerGeometry = new THREE.BoxGeometry(ROAD_LENGTH, 0.5, 1);
+                const dividerMaterial = materials.concrete;
+                const divider = new THREE.Mesh(dividerGeometry, dividerMaterial);
+                divider.position.set(0, 0.15, 0);
+                roadGroup.add(divider);
+                
+                // Passeios
+                const sidewalkGeometry = new THREE.BoxGeometry(ROAD_LENGTH, 0.3, 4);
+                [-26, 26].forEach(z => {
+                    const sidewalk = new THREE.Mesh(sidewalkGeometry, materials.concrete);
+                    sidewalk.position.set(0, 0, z);
+                    sidewalk.receiveShadow = true;
+                    roadGroup.add(sidewalk);
+                });
+                
+            } else {
+                // Modo Solo - 2 faixas
+                // Linha central dupla amarela
+                [-0.3, 0.3].forEach(offset => {
+                    const centerLineGeometry = new THREE.BoxGeometry(ROAD_LENGTH, 0.02, 0.15);
+                    const centerLineMaterial = new THREE.MeshBasicMaterial({ color: 0xFFD700 });
+                    const centerLine = new THREE.Mesh(centerLineGeometry, centerLineMaterial);
+                    centerLine.position.set(0, 0.02, offset);
+                    roadGroup.add(centerLine);
+                });
+                
+                // Linhas laterais
+                [-11, 11].forEach(z => {
+                    const sideLineGeometry = new THREE.BoxGeometry(ROAD_LENGTH, 0.02, 0.2);
+                    const sideLineMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+                    const sideLine = new THREE.Mesh(sideLineGeometry, sideLineMaterial);
+                    sideLine.position.set(0, 0.02, z);
+                    roadGroup.add(sideLine);
+                });
+                
+                // Separador central pequeno
+                const dividerGeometry = new THREE.BoxGeometry(ROAD_LENGTH, 0.3, 0.5);
+                const dividerMaterial = materials.concrete;
+                const divider = new THREE.Mesh(dividerGeometry, dividerMaterial);
+                divider.position.set(0, 0.1, 0);
+                roadGroup.add(divider);
+                
+                // Passeios
+                const sidewalkGeometry = new THREE.BoxGeometry(ROAD_LENGTH, 0.3, 4);
+                [-14, 14].forEach(z => {
+                    const sidewalk = new THREE.Mesh(sidewalkGeometry, materials.concrete);
+                    sidewalk.position.set(0, 0, z);
+                    sidewalk.receiveShadow = true;
+                    roadGroup.add(sidewalk);
+                });
+            }
+            
+            scene.add(roadGroup);
+        }
+        
+        function createCoils() {
+            // Limpar bobinas existentes
+            coils.forEach(coil => scene.remove(coil));
+            coils = [];
+            
+            if (isHighwayMode) {
+                // Modo autoestrada - bobinas em todas as 4 faixas
+                const lanes = [-18, -6, 6, 18];
+                lanes.forEach(laneZ => {
+                    for (let i = 0; i < NUM_COILS; i++) {
+                        createSingleCoil(i, laneZ);
+                    }
+                });
+            } else {
+                // Modo solo - bobinas apenas no centro
+                for (let i = 0; i < NUM_COILS; i++) {
+                    createSingleCoil(i, 0);
+                }
+            }
+        }
+        
+        function createSingleCoil(index, zPosition) {
+            const coilSystem = new THREE.Group();
+            
+            const rings = [
+                { radius: 2.5, thickness: 0.08, color: 0xB87333 },
+                { radius: 2.0, thickness: 0.08, color: 0xCD853F },
+                { radius: 1.5, thickness: 0.08, color: 0xDEB887 },
+                { radius: 1.0, thickness: 0.08, color: 0xF4A460 },
+                { radius: 0.5, thickness: 0.08, color: 0xFFB347 }
+            ];
+            
+            rings.forEach(ring => {
+                const geometry = new THREE.TorusGeometry(ring.radius, ring.thickness, 16, 100);
+                const material = new THREE.MeshPhongMaterial({
+                    color: ring.color,
+                    emissive: ring.color,
+                    emissiveIntensity: 0.1,
+                    shininess: 100
+                });
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.rotation.x = Math.PI / 2;
+                mesh.position.y = 0.02;
+                coilSystem.add(mesh);
+            });
+            
+            // Núcleo central
+            const coreGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.1, 32);
+            const coreMaterial = new THREE.MeshPhongMaterial({
+                color: 0x444444,
+                metalness: 0.9,
+                roughness: 0.1
+            });
+            const core = new THREE.Mesh(coreGeometry, coreMaterial);
+            core.position.y = 0.05;
+            coilSystem.add(core);
+            
+            coilSystem.position.x = -ROAD_LENGTH/2 + (index + 0.5) * COIL_SPACING;
+            coilSystem.position.z = zPosition;
+            
+            coils.push(coilSystem);
+            scene.add(coilSystem);
+        }
+        
+        function createSUV() {
+            const suvGroup = new THREE.Group();
+            
+            // Carroceria
+            const bodyGeometry = new THREE.BoxGeometry(10, 2.5, 4.5);
+            bodyGeometry.translate(0, 1.25, 0);
+            const body = new THREE.Mesh(bodyGeometry, materials.carPaint);
+            body.castShadow = true;
+            suvGroup.add(body);
+            
+            // Vidros
+            const glassMaterial = materials.glass;
+            
+            // Para-brisa
+            const windshieldGeometry = new THREE.BoxGeometry(0.1, 1.5, 3.8);
+            windshieldGeometry.rotateZ(-Math.PI / 5);
+            windshieldGeometry.translate(3, 2.3, 0);
+            const windshield = new THREE.Mesh(windshieldGeometry, glassMaterial);
+            suvGroup.add(windshield);
+            
+            // Faróis
+            [-1.8, 1.8].forEach(z => {
+                const headlightGeometry = new THREE.BoxGeometry(0.3, 0.5, 1);
+                const headlightMaterial = new THREE.MeshPhysicalMaterial({
+                    color: 0xFFFFFF,
+                    emissive: 0xFFFFFF,
+                    emissiveIntensity: 0.5
+                });
+                const headlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
+                headlight.position.set(5, 1.3, z);
+                suvGroup.add(headlight);
+            });
+            
+            // Rodas
+            const wheelPositions = [
+                { x: -3.5, z: 2.5 },
+                { x: 3.5, z: 2.5 },
+                { x: -3.5, z: -2.5 },
+                { x: 3.5, z: -2.5 }
+            ];
+            
+            wheelPositions.forEach(pos => {
+                const wheelGroup = new THREE.Group();
+                wheelGroup.position.set(pos.x, 0.8, pos.z);
+                
+                // Pneu
+                const tireGeometry = new THREE.TorusGeometry(0.8, 0.35, 12, 32);
+                const tireMaterial = new THREE.MeshLambertMaterial({ color: 0x1A1A1A });
+                const tire = new THREE.Mesh(tireGeometry, tireMaterial);
+                tire.castShadow = true;
+                wheelGroup.add(tire);
+                
+                // Jante
+                const rimGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.4, 32);
+                const rim = new THREE.Mesh(rimGeometry, materials.chrome);
+                rim.rotation.z = Math.PI / 2;
+                wheelGroup.add(rim);
+                
+                // Raios
+                for (let i = 0; i < 5; i++) {
+                    const spokeGeometry = new THREE.BoxGeometry(0.1, 0.9, 0.35);
+                    const spoke = new THREE.Mesh(spokeGeometry, materials.chrome);
+                    spoke.rotation.z = Math.PI / 2;
+                    spoke.rotation.x = (i * Math.PI * 2) / 5;
+                    wheelGroup.add(spoke);
+                }
+                
+                suvWheels.push(wheelGroup);
+                suvGroup.add(wheelGroup);
+            });
+            
+            // Bobina receptora
+            const receiverGeometry = new THREE.TorusGeometry(1.8, 0.15, 12, 60);
+            const receiverMaterial = new THREE.MeshPhongMaterial({
+                color: 0x00FF00,
+                emissive: 0x00FF00,
+                emissiveIntensity: 0.5,
+                transparent: true,
+                opacity: 0.8
+            });
+            const receiver = new THREE.Mesh(receiverGeometry, receiverMaterial);
+            receiver.position.y = 0.3;
+            receiver.rotation.x = Math.PI / 2;
+            suvGroup.add(receiver);
+            
+            suv = suvGroup;
+            suv.position.x = suvPosition;
+            suv.position.z = 0;
+            suv.scale.set(0.85, 0.85, 0.85);
+            scene.add(suv);
+        }
+        
+        function createOtherCars() {
+            // Limpar carros existentes
+            otherCars.forEach(car => scene.remove(car));
+            otherCars = [];
+            
+            const carColors = [
+                0xC62828, 0xF5F5F5, 0x212121, 0xF57C00, 0x1565C0,
+                0x616161, 0xFDD835, 0x43A047, 0x6A1B9A, 0x795548,
+                0xFF1744, 0x2196F3, 0x4CAF50, 0xFFEB3B, 0x9C27B0,
+                0x00BCD4, 0xFF5722, 0x607D8B, 0xE91E63, 0x3F51B5
+            ];
+            
+            const lanes = [-18, -6, 6, 18];
+            
+            for (let i = 0; i < 60; i++) {  // 60 carros na autoestrada
+                const carGroup = new THREE.Group();
+                const carColor = carColors[Math.floor(Math.random() * carColors.length)];
+                
+                // USAR MODELO IDÊNTICO AO SUV PRINCIPAL
+                
+                // Carroceria (idêntica ao SUV principal)
+                const bodyGeometry = new THREE.BoxGeometry(10, 2.5, 4.5);
+                bodyGeometry.translate(0, 1.25, 0);
+                const bodyMaterial = new THREE.MeshPhysicalMaterial({
+                    color: carColor, // Usar cor selecionada
+                    metalness: 0.6,
+                    roughness: 0.3,
+                    clearcoat: 1.0,
+                    clearcoatRoughness: 0.03
+                });
+                const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                body.castShadow = true;
+                carGroup.add(body);
+                
+                // Vidros (idênticos ao SUV principal)
+                const glassMaterial = materials.glass;
+                
+                // Para-brisa
+                const windshieldGeometry = new THREE.BoxGeometry(0.1, 1.5, 3.8);
+                windshieldGeometry.rotateZ(-Math.PI / 5);
+                windshieldGeometry.translate(3, 2.3, 0);
+                const windshield = new THREE.Mesh(windshieldGeometry, glassMaterial);
+                carGroup.add(windshield);
+                
+                // Faróis
+                [-1.8, 1.8].forEach(z => {
+                    const headlightGeometry = new THREE.BoxGeometry(0.3, 0.5, 1);
+                    const headlightMaterial = new THREE.MeshPhysicalMaterial({
+                        color: 0xFFFFFF,
+                        emissive: 0xFFFFFF,
+                        emissiveIntensity: 0.5
+                    });
+                    const headlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
+                    headlight.position.set(5, 1.3, z);
+                    carGroup.add(headlight);
+                });
+                
+                // Rodas (idênticas ao SUV principal)
+                const wheelPositions = [
+                    { x: -3.5, z: 2.5 },
+                    { x: 3.5, z: 2.5 },
+                    { x: -3.5, z: -2.5 },
+                    { x: 3.5, z: -2.5 }
+                ];
+                
+                const carWheels = [];
+                wheelPositions.forEach(pos => {
+                    const wheelGroup = new THREE.Group();
+                    wheelGroup.position.set(pos.x, 0.8, pos.z);
+                    
+                    // Pneu
+                    const tireGeometry = new THREE.TorusGeometry(0.8, 0.35, 12, 32);
+                    const tireMaterial = new THREE.MeshLambertMaterial({ color: 0x1A1A1A });
+                    const tire = new THREE.Mesh(tireGeometry, tireMaterial);
+                    tire.castShadow = true;
+                    wheelGroup.add(tire);
+                    
+                    // Jante
+                    const rimGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.4, 32);
+                    const rim = new THREE.Mesh(rimGeometry, materials.chrome);
+                    rim.rotation.z = Math.PI / 2;
+                    wheelGroup.add(rim);
+                    
+                    // Raios da jante
+                    for (let i = 0; i < 5; i++) {
+                        const spokeGeometry = new THREE.BoxGeometry(0.1, 0.9, 0.35);
+                        const spoke = new THREE.Mesh(spokeGeometry, materials.chrome);
+                        spoke.rotation.z = Math.PI / 2;
+                        spoke.rotation.x = (i * Math.PI * 2) / 5;
+                        wheelGroup.add(spoke);
+                    }
+                    
+                    carGroup.add(wheelGroup);
+                    carWheels.push(wheelGroup);
+                });
+                
+                // Posicionar carro uniformemente na área VISÍVEL
+                const laneIndex = i % 4;
+                const lane = lanes[laneIndex];
+                
+                // Distribuir 60 carros com espaçamento uniforme por faixa
+                const carsPerLane = 15; // 60/4 = 15 carros por faixa
+                const carIndexInLane = Math.floor(i / 4);
+                const spacing = ROAD_LENGTH / carsPerLane;
+                const startX = -ROAD_LENGTH/2 + (carIndexInLane * spacing) + spacing/2 + (Math.random() - 0.5) * 5;
+                
+                carGroup.position.set(startX, 0.1, lane); // Ligeiramente elevado
+                carGroup.scale.set(0.85, 0.85, 0.85); // Mesma escala do SUV principal
+                
+                // Velocidade FIXA por faixa (sem ultrapassagens)
+                let speed;
+                if (lane === -18) {
+                    speed = 0.18; // Faixa mais à direita - mais lenta
+                } else if (lane === -6) {
+                    speed = 0.22; // Faixa centro-direita
+                } else if (lane === 6) {
+                    speed = -0.24; // Faixa centro-esquerda (sentido oposto)
+                } else if (lane === 18) {
+                    speed = -0.20; // Faixa mais à esquerda (sentido oposto)
+                }
+                
+                carGroup.userData = {
+                    speed: speed,
+                    lane: lane,
+                    wheels: carWheels
+                };
+                
+                // Rotacionar carros nas faixas da esquerda (sentido oposto)
+                if (lane > 0) {
+                    carGroup.rotation.y = Math.PI;
+                }
+                
+                // IMPORTANTE: Carros começam INVISÍVEIS (serão mostrados em modo autoestrada)
+                carGroup.visible = false;
+                scene.add(carGroup);
+                otherCars.push(carGroup);
+            }
+        }
+        
+        function createSolarPanels() {
+            // Painéis solares
+            const panelDistance = isHighwayMode ? 35 : 25;
+            
+            for (let i = 0; i < 10; i++) {
+                const solarGroup = new THREE.Group();
+                
+                const panelGeometry = new THREE.BoxGeometry(8, 0.2, 5);
+                const panelMaterial = new THREE.MeshPhysicalMaterial({
+                    color: 0x1a237e,
+                    metalness: 0.5,
+                    roughness: 0.05,
+                    clearcoat: 0.5
+                });
+                
+                const panel = new THREE.Mesh(panelGeometry, panelMaterial);
+                panel.position.y = 3;
+                panel.rotation.x = -Math.PI / 8;
+                panel.castShadow = true;
+                solarGroup.add(panel);
+                
+                // Poste
+                const poleGeometry = new THREE.CylinderGeometry(0.3, 0.4, 3);
+                const poleMaterial = new THREE.MeshPhongMaterial({ color: 0x606060 });
+                const pole = new THREE.Mesh(poleGeometry, poleMaterial);
+                pole.position.y = 1.5;
+                pole.castShadow = true;
+                solarGroup.add(pole);
+                
+                solarGroup.position.set(-200 + i * 40, 0, panelDistance);
+                solarGroup.name = 'solar-panel';
+                scene.add(solarGroup);
+                solarPanels.push(solarGroup);
+            }
+            
+            // Painéis do outro lado
+            for (let i = 0; i < 10; i++) {
+                const solarGroup = new THREE.Group();
+                
+                const panelGeometry = new THREE.BoxGeometry(5, 0.15, 3);
+                const panelMaterial = new THREE.MeshPhysicalMaterial({
+                    color: 0x1a237e,
+                    metalness: 0.4,
+                    roughness: 0.1,
+                    clearcoat: 0.3
+                });
+                
+                const panel = new THREE.Mesh(panelGeometry, panelMaterial);
+                panel.position.set(2, 2.8, 0);
+                panel.rotation.x = Math.PI / 10;
+                panel.castShadow = true;
+                solarGroup.add(panel);
+                
+                const armGeometry = new THREE.BoxGeometry(3, 0.2, 0.3);
+                const armMaterial = new THREE.MeshPhongMaterial({ color: 0x707070 });
+                const arm = new THREE.Mesh(armGeometry, armMaterial);
+                arm.position.set(1.5, 2.3, 0);
+                solarGroup.add(arm);
+                
+                solarGroup.position.set(-150 + i * 40, 0, -panelDistance);
+                solarGroup.name = 'solar-panel';
+                scene.add(solarGroup);
+                solarPanels.push(solarGroup);
+            }
+        }
+        
+        function updateSolarPanels() {
+            // Atualizar posição dos painéis baseado no modo
+            const panelDistance = isHighwayMode ? 35 : 25;
+            
+            solarPanels.forEach((panel, index) => {
+                if (index < 10) {
+                    panel.position.z = panelDistance;
+                } else {
+                    panel.position.z = -panelDistance;
+                }
+            });
+        }
+        
+        function createEnergyFields() {
+            // Limpar campos existentes
+            energyFields.forEach(field => scene.remove(field));
+            energyFields = [];
+            particleSystems = [];
+            
+            coils.forEach(coil => {
+                const fieldGroup = new THREE.Group();
+                
+                const particleCount = 80;
+                const geometry = new THREE.BufferGeometry();
+                const positions = new Float32Array(particleCount * 3);
+                const colors = new Float32Array(particleCount * 3);
+                
+                for (let i = 0; i < particleCount; i++) {
+                    const theta = Math.random() * Math.PI * 2;
+                    const radius = Math.random() * 2.5 + 0.5;
+                    const height = Math.random() * 2 - 0.2;
+                    
+                    positions[i * 3] = Math.cos(theta) * radius;
+                    positions[i * 3 + 1] = height;
+                    positions[i * 3 + 2] = Math.sin(theta) * radius;
+                    
+                    colors[i * 3] = 0;
+                    colors[i * 3 + 1] = 0.8 + Math.random() * 0.2;
+                    colors[i * 3 + 2] = 1;
+                }
+                
+                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+                
+                const material = new THREE.PointsMaterial({
+                    size: 0.25,
+                    vertexColors: true,
+                    transparent: true,
+                    opacity: 0.8,
+                    blending: THREE.AdditiveBlending,
+                    sizeAttenuation: true
+                });
+                
+                const particles = new THREE.Points(geometry, material);
+                fieldGroup.add(particles);
+                
+                fieldGroup.position.copy(coil.position);
+                fieldGroup.position.y = 0.2;
+                fieldGroup.visible = false;
+                scene.add(fieldGroup);
+                energyFields.push(fieldGroup);
+                particleSystems.push(particles);
+            });
+        }
+        
+        function createTrees() {
+            const treeDistance = isHighwayMode ? 38 : 28;
+            
+            for (let x = -175; x < 175; x += 30) {
+                if (x % 60 !== 0) {
+                    [-1, 1].forEach(side => {
+                        const treeGroup = new THREE.Group();
+                        
+                        const trunkGeometry = new THREE.CylinderGeometry(0.8, 1, 8);
+                        const trunkMaterial = new THREE.MeshPhongMaterial({ color: 0x4A3C28 });
+                        const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+                        trunk.position.y = 4;
+                        trunk.castShadow = true;
+                        treeGroup.add(trunk);
+                        
+                        const leavesGeometry = new THREE.SphereGeometry(4, 16, 12);
+                        const leavesMaterial = new THREE.MeshLambertMaterial({ color: 0x2D5016 });
+                        const leaves = new THREE.Mesh(leavesGeometry, leavesMaterial);
+                        leaves.position.y = 9;
+                        leaves.scale.set(1.2, 1.5, 1.2);
+                        leaves.castShadow = true;
+                        treeGroup.add(leaves);
+                        
+                        treeGroup.position.set(
+                            x + (Math.random() - 0.5) * 3,
+                            0,
+                            side * treeDistance + (Math.random() - 0.5) * 2
+                        );
+                        
+                        const scale = 0.8 + Math.random() * 0.4;
+                        treeGroup.scale.set(scale, scale, scale);
+                        treeGroup.name = 'tree';
+                        
+                        scene.add(treeGroup);
+                        trees.push(treeGroup);
+                    });
+                }
+            }
+        }
+        
+        function updateTrees() {
+            const treeDistance = isHighwayMode ? 38 : 28;
+            
+            trees.forEach((tree, index) => {
+                const side = index % 2 === 0 ? -1 : 1;
+                tree.position.z = side * treeDistance + (Math.random() - 0.5) * 2;
+            });
+        }
+        
+        function createBuildings() {
+            const buildingPositions = [
+                { x: -180, z: -80, height: 60, width: 25 },
+                { x: -120, z: -90, height: 80, width: 30 },
+                { x: -60, z: -85, height: 100, width: 35 },
+                { x: 0, z: -95, height: 120, width: 40 },
+                { x: 60, z: -85, height: 90, width: 30 },
+                { x: 120, z: -90, height: 110, width: 35 },
+                { x: 180, z: -80, height: 70, width: 25 }
+            ];
+            
+            buildingPositions.forEach(bldg => {
+                const buildingGeometry = new THREE.BoxGeometry(bldg.width, bldg.height, 20);
+                const buildingMaterial = new THREE.MeshPhongMaterial({
+                    color: 0x5C6BC0,
+                    emissive: 0x5C6BC0,
+                    emissiveIntensity: 0.01
+                });
+                
+                const building = new THREE.Mesh(buildingGeometry, buildingMaterial);
+                building.position.set(bldg.x, bldg.height/2, bldg.z);
+                building.castShadow = true;
+                building.receiveShadow = true;
+                scene.add(building);
+                buildings.push(building);
+            });
+        }
+        
+        function setupControls() {
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2.1;
+            controls.minDistance = 30;
+            controls.maxDistance = 400;
+            controls.target.set(0, 0, 0);
+            controls.enablePan = true;
+        }
+        
+        function setupEventListeners() {
+            // Play/Pause
+            document.getElementById('btn-play').addEventListener('click', function() {
+                isPlaying = !isPlaying;
+                this.textContent = isPlaying ? '⏸' : '▶';
+            });
+            
+            // Reset View
+            document.getElementById('btn-reset').addEventListener('click', () => {
+                camera.position.set(50, 35, 70);
+                camera.lookAt(0, 0, 0);
+                controls.reset();
+            });
+            
+            // Change View
+            document.getElementById('btn-view').addEventListener('click', () => {
+                currentView = (currentView + 1) % 5;
+                switch(currentView) {
+                    case 0:
+                        camera.position.set(isHighwayMode ? 100 : 50, isHighwayMode ? 60 : 35, isHighwayMode ? 120 : 70);
+                        break;
+                    case 1:
+                        camera.position.set(0, isHighwayMode ? 150 : 120, 10);
+                        break;
+                    case 2:
+                        camera.position.set(0, 30, 100);
+                        break;
+                    case 3:
+                        camera.position.set(suvPosition - 40, 25, 35);
+                        break;
+                    case 4:
+                        const laneZ = isHighwayMode ? -18 : 0;
+                        camera.position.set(suvPosition + 3, 3, laneZ);
+                        break;
+                }
+                camera.lookAt(suv.position);
+            });
+            
+            // Toggle Energy
+            document.getElementById('btn-energy').addEventListener('click', function() {
+                showEnergy = !showEnergy;
+                this.classList.toggle('active');
+                if (!showEnergy) {
+                    energyFields.forEach(field => field.visible = false);
+                }
+            });
+            
+            // Toggle Mode
+            document.getElementById('btn-mode').addEventListener('click', () => {
+                setMode(!isHighwayMode);
+            });
+            
+            // Speed Slider
+            document.getElementById('speed-slider').addEventListener('input', function(e) {
+                vehicleSpeed = parseInt(e.target.value);
+                document.getElementById('speed-value').textContent = vehicleSpeed + ' km/h';
+            });
+            
+            // Keyboard controls (mudança de faixa)
+            window.addEventListener('keydown', (e) => {
+                if (!isHighwayMode) return;
+                
+                const lanes = [-18, -6, 6, 18];
+                const currentLane = suv.position.z;
+                let laneIndex = lanes.findIndex(lane => Math.abs(lane - currentLane) < 3);
+                
+                if (e.key === 'a' || e.key === 'A') {
+                    if (laneIndex < lanes.length - 1) {
+                        laneIndex++;
+                        animateLaneChange(lanes[laneIndex]);
+                    }
+                } else if (e.key === 'd' || e.key === 'D') {
+                    if (laneIndex > 0) {
+                        laneIndex--;
+                        animateLaneChange(lanes[laneIndex]);
+                    }
+                }
+            });
+            
+            // Window resize
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+        
+        function animateLaneChange(targetZ) {
+            const startZ = suv.position.z;
+            let progress = 0;
+            
+            const changeLane = setInterval(() => {
+                progress += 0.05;
+                suv.position.z = startZ + (targetZ - startZ) * progress;
+                
+                if (progress >= 1) {
+                    suv.position.z = targetZ;
+                    clearInterval(changeLane);
+                }
+            }, 16);
+        }
+        
+        function setMode(highway) {
+            isHighwayMode = highway;
+            
+            // Atualizar estrada
+            updateRoad();
+            
+            // Recriar bobinas
+            createCoils();
+            createEnergyFields();
+            
+            // Mostrar/esconder carros
+            otherCars.forEach((car, index) => {
+                car.visible = isHighwayMode;
+                // Forçar atualização de visibilidade
+                if (isHighwayMode) {
+                    car.traverse((child) => {
+                        if (child.isMesh) {
+                            child.visible = true;
+                        }
+                    });
+                }
+            });
+            
+            // Forçar renderização
+            if (isHighwayMode && renderer) {
+                renderer.render(scene, camera);
+            }
+            
+            // Atualizar posição do SUV
+            if (isHighwayMode) {
+                suv.position.z = -18; // Faixa direita
+            } else {
+                suv.position.z = 0; // Centro
+            }
+            
+            // Atualizar painéis solares e árvores
+            updateSolarPanels();
+            updateTrees();
+            
+            // Atualizar UI
+            document.getElementById('mode-text').textContent = isHighwayMode ? 'Autoestrada' : 'Solo';
+            document.getElementById('lanes-text').textContent = isHighwayMode ? '4 vias' : '2 vias';
+            document.getElementById('vehicles-count').textContent = isHighwayMode ? '61 ativos' : '1 ativo';
+            document.getElementById('btn-mode').innerHTML = isHighwayMode ? 'Auto 🛣️' : 'Solo 🚙';
+            
+            // Mostrar/esconder controlos de faixa
+            const controlsInfo = document.getElementById('controls-info');
+            if (isHighwayMode) {
+                controlsInfo.classList.add('show');
+                setTimeout(() => controlsInfo.classList.remove('show'), 5000);
+            } else {
+                controlsInfo.classList.remove('show');
+            }
+            
+            // Ajustar câmera
+            if (currentView === 0) {
+                camera.position.set(
+                    isHighwayMode ? 100 : 50,
+                    isHighwayMode ? 60 : 35,
+                    isHighwayMode ? 120 : 70
+                );
+            }
+        }
+        
+        function updateSUV() {
+            if (!isPlaying) return;
+            
+            const speedMultiplier = vehicleSpeed / 80;
+            const actualSpeed = BASE_SPEED * speedMultiplier;
+            
+            // Mover SUV
+            suvPosition += actualSpeed;
+            if (suvPosition > ROAD_LENGTH / 2 - 50) {
+                suvPosition = -ROAD_LENGTH / 2 + 50;
+            }
+            suv.position.x = suvPosition;
+            
+            // Rodar rodas
+            const wheelRotationSpeed = actualSpeed * 1.2;
+            suvWheels.forEach((wheel) => {
+                wheel.rotation.z -= wheelRotationSpeed;
+            });
+            
+            // Verificar bobinas - FUNCIONAM COMO UMA UNIDADE
+            let isOverAnyCoil = false;
+            let activeCoilCount = 0;
+            
+            coils.forEach((coilSystem, index) => {
+                const distance = Math.abs(coilSystem.position.x - suvPosition);
+                const laneDistance = Math.abs(coilSystem.position.z - suv.position.z);
+                
+                if (distance < 8 && laneDistance < 3) {
+                    isOverAnyCoil = true;
+                    activeCoilCount++;
+                    
+                    // Animar bobina
+                    coilSystem.children.forEach((ring, ringIndex) => {
+                        if (ring.material) {
+                            ring.material.emissiveIntensity = 0.6 - ringIndex * 0.1;
+                            ring.material.emissive = new THREE.Color(0xFFD700);
+                        }
+                    });
+                    
+                    // Campo de energia
+                    if (showEnergy && energyFields[index]) {
+                        energyFields[index].visible = true;
+                        energyFields[index].rotation.y -= 0.04;
+                        
+                        if (particleSystems[index]) {
+                            particleSystems[index].rotation.y -= 0.06;
+                        }
+                    }
+                } else {
+                    // Desativar bobina
+                    coilSystem.children.forEach(ring => {
+                        if (ring.material) {
+                            ring.material.emissiveIntensity = 0.1;
+                            ring.material.emissive = ring.material.color;
+                        }
+                    });
+                    if (energyFields[index]) {
+                        energyFields[index].visible = false;
+                    }
+                }
+            });
+            
+            // POTÊNCIA CONSTANTE quando sobre qualquer bobina
+            let currentPower = 0;
+            if (isOverAnyCoil) {
+                // Potência fixa: 50 kW em Solo, 60 kW em Autoestrada
+                if (isHighwayMode) {
+                    currentPower = 60;
+                } else {
+                    currentPower = 50;
+                }
+            }
+            
+            // Bateria
+            if (currentPower > 0) {
+                const chargeRate = currentPower * 0.001;
+                batteryLevel = Math.min(100, batteryLevel + chargeRate);
+                totalEnergy += currentPower * 0.0001;
+            } else {
+                batteryLevel = Math.max(0, batteryLevel - 0.005);
+            }
+            
+            // Atualizar UI
+            updateUI(currentPower, isOverAnyCoil);
+        }
+        
+        function updateOtherCars() {
+            if (!isHighwayMode) return;
+            
+            otherCars.forEach(car => {
+                if (!car.visible) return; // Skip se não visível
+                
+                // Carros sempre se movem (tráfego autônomo)
+                car.position.x += car.userData.speed;
+                
+                // Loop - reposicionar quando sair da estrada
+                if (car.userData.lane > 0) { // Faixas da esquerda (sentido contrário)
+                    if (car.position.x < -ROAD_LENGTH/2 - 20) {
+                        car.position.x = ROAD_LENGTH/2 + 20;
+                        car.position.y = 0.1; // Manter altura
+                    }
+                } else { // Faixas da direita
+                    if (car.position.x > ROAD_LENGTH/2 + 20) {
+                        car.position.x = -ROAD_LENGTH/2 - 20;
+                        car.position.y = 0.1; // Manter altura
+                    }
+                }
+                
+                // Rodar rodas (sempre, pois tráfego é autônomo)
+                if (car.userData.wheels) {
+                    car.userData.wheels.forEach(wheel => {
+                        // Rotação das rodas proporcional à velocidade
+                        wheel.rotation.z -= Math.abs(car.userData.speed) * 1.2;
+                    });
+                }
+            });
+        }
+        
+        function updateUI(power, isOverCoil) {
+            document.getElementById('current-speed').textContent = vehicleSpeed + ' km/h';
+            document.getElementById('current-speed').style.color = '#2E7D32';
+            
+            let powerText;
+            if (power > 0) {
+                powerText = Math.round(power) + ' kW';
+                if (isHighwayMode) {
+                    powerText += ' ⚡';
+                }
+            } else {
+                powerText = '0 kW';
+            }
+            document.getElementById('current-power').textContent = powerText;
+            document.getElementById('current-power').style.color = '#2E7D32';
+            
+            document.getElementById('battery-level').textContent = Math.round(batteryLevel) + '%';
+            document.getElementById('battery-level').style.color = '#2E7D32';
+            document.getElementById('battery-bar').style.width = batteryLevel + '%';
+            
+            const consumption = 0.2 * (vehicleSpeed / 80);
+            const range = (batteryLevel * 0.75 / consumption).toFixed(0);
+            document.getElementById('range').textContent = range + ' km';
+            document.getElementById('range').style.color = '#2E7D32';
+            
+            // Cor da bateria
+            const batteryBar = document.getElementById('battery-bar');
+            if (batteryLevel < 20) {
+                batteryBar.style.background = 'linear-gradient(90deg, #F44336, #E57373)';
+            } else if (batteryLevel < 50) {
+                batteryBar.style.background = 'linear-gradient(90deg, #FF9800, #FFB74D)';
+            } else {
+                batteryBar.style.background = 'linear-gradient(90deg, #4CAF50, #8BC34A)';
+            }
+            
+            // Eficiência constante quando sobre bobinas
+            if (isHighwayMode && isOverCoil) {
+                document.getElementById('efficiency-text').textContent = '95.0%';
+            } else if (isOverCoil) {
+                document.getElementById('efficiency-text').textContent = '90.7%';
+            } else {
+                document.getElementById('efficiency-text').textContent = '90.7%';
+            }
+        }
+        
+        function updateFPS() {
+            frameCount++;
+            const currentTime = performance.now();
+            if (currentTime >= lastTime + 1000) {
+                fps = Math.round((frameCount * 1000) / (currentTime - lastTime));
+                document.getElementById('fps').textContent = `FPS: ${fps}`;
+                frameCount = 0;
+                lastTime = currentTime;
+            }
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Updates
+            updateSUV();
+            updateOtherCars(); // Sempre atualizar carros (tráfego autônomo)
+            updateFPS();
+            
+            // Câmera seguir carro
+            if (currentView === 3 && isPlaying) {
+                camera.position.x = suvPosition - 40;
+                camera.lookAt(suv.position);
+            } else if (currentView === 4 && isPlaying) {
+                const laneZ = isHighwayMode ? -18 : 0;
+                camera.position.x = suvPosition + 3;
+                camera.position.y = 3;
+                camera.position.z = laneZ;
+                camera.lookAt(suvPosition + 100, 2, laneZ);
+            }
+            
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        
+        // Iniciar
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
